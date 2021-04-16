@@ -44,7 +44,7 @@ Semantic segmentation, auto encoders, gray level co-occurrence matrix, deep lear
 \section{Introduction}
 Railway safety and accident prevention has been one of the primary task to ensure minimal loss and uninterrupted operations especially with high speed trains. We plan to detect obstacles which can/pose a threat to the safe functioning of the railways ahead of the accident. This technology when integrated with the warning system can help alleviate possible accidents.
 
-\section{Ease of Use}
+\section{RELATED WORKS}
 
 \subsection{Maintaining the Integrity of the Specifications}
 
@@ -56,15 +56,10 @@ and others are deliberate, using specifications that anticipate your paper
 as one part of the entire proceedings, and not as an independent document. 
 Please do not revise any of the current designations.
 
-\section{Prepare Your Paper Before Styling}
-Before you begin to format your paper, first write and save the content as a 
-separate text file. Complete all content and organizational editing before 
-formatting. Please note sections \ref{AA}--\ref{SCM} below for more information on 
-proofreading, spelling and grammar.
+\section{PROPOSED METHOD}
+Our method detects the obstacles or anomalies along the track with the help of deep learning methods. First, we try to sketch out rails from the given image which will be inspected later on for anomaly presence. We perform a semantic segmentation here with rail track as class labelled 1 and non-rail classes labelled 0. The data used here is Railsem-19 \cite{b1} 
+ which is publicly available. We use the model U-Net \cite{b2} for semantic segmentation task. This model has skip connections (copy and crop) throughout its stream so as to prevent lossy compression by the pooling layer. During each pooling, a copy of feature map is stored for later concatenation that can help avoid better edge approximations. The concatenation of old feature maps preserves spatial feature when compared to pooled layers and pooled layers extracts features which are essential for semantic segmentation task. A short view of U-Net network is shown below:
 
-Keep your text and graphic files separate until after the text has been 
-formatted and styled. Do not number text heads---{\LaTeX} will do that 
-for you.
 
 \subsection{Abbreviations and Acronyms}\label{AA}
 Define abbreviations and acronyms the first time they are used in the text, 
@@ -227,8 +222,8 @@ acknowledgments in the unnumbered footnote on the first page.
 
 \section*{References}
 
-Please number citations consecutively within brackets \cite{b1}. The 
-sentence punctuation follows the bracket \cite{b2}. Refer simply to the reference 
+Please number citations consecutively within brackets. The 
+sentence punctuation follows the bracket . Refer simply to the reference 
 number, as in \cite{b3}---do not use ``Ref. \cite{b3}'' or ``reference \cite{b3}'' except at 
 the beginning of a sentence: ``Reference \cite{b3} was the first $\ldots$''
 
@@ -247,8 +242,8 @@ For papers published in translation journals, please give the English
 citation first, followed by the original foreign-language citation \cite{b6}.
 
 \begin{thebibliography}{00}
-\bibitem{b1} G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
-\bibitem{b2} J. Clerk Maxwell, A Treatise on Electricity and Magnetism, 3rd ed., vol. 2. Oxford: Clarendon, 1892, pp.68--73.
+\bibitem{b1} Oliver Zendel, Markus Murschitz, Marcel Zeilinger, Daniel Steininger, Sara Abbasi, Csaba Beleznai, RailSem19: A Dataset for Semantic Rail Scene Understanding, IEEE Xplore: 10.1109/CVPRW.2019.00161
+\bibitem{b2} Olaf Ronneberger, Philipp Fischer, and Thomas Brox, U-Net: Convolutional Networks for BiomedicalImage Segmentation, arxiv.org:1505.04597, 2015
 \bibitem{b3} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
 \bibitem{b4} K. Elissa, ``Title of paper if known,'' unpublished.
 \bibitem{b5} R. Nicole, ``Title of paper with only first word capitalized,'' J. Name Stand. Abbrev., in press.
