@@ -57,8 +57,7 @@ as one part of the entire proceedings, and not as an independent document.
 Please do not revise any of the current designations.
 
 \section{PROPOSED METHOD}
-Our method detects the obstacles or anomalies along the track with the help of deep learning methods. First, we try to sketch out rails from the given image which will be inspected later on for anomaly presence. We perform a semantic segmentation here with rail track as class labelled 1 and non-rail classes labelled 0. The data used here is Railsem-19 \cite{b1} 
- which is publicly available. We use the model U-Net \cite{b2} for semantic segmentation task. This model has skip connections (copy and crop) throughout its stream so as to prevent lossy compression by the pooling layer. During each pooling, a copy of feature map is stored for later concatenation that can help avoid better edge approximations. The concatenation of old feature maps preserves spatial feature when compared to pooled layers and pooled layers extracts features which are essential for semantic segmentation task. The ``Fig.~\ref{U-Net}'' shows the architecture of our semantic segmentation model.
+Our method detects the obstacles or anomalies along the track with the help of deep learning methods. First, we try to sketch out rails from the given image which will be inspected later on for anomaly presence. We perform a semantic segmentation here with rail track as class labelled 1 and non-rail classes labelled 0. We use the model U-Net \cite{ronneberger2015unet} for semantic segmentation task. This model has skip connections (copy and crop) throughout its stream so as to prevent lossy compression by the pooling layer. During each pooling, a copy of feature map is stored for later concatenation that can help avoid better edge approximations. The concatenation of old feature maps preserves spatial feature when compared to pooled layers and pooled layers extracts features which are essential for semantic segmentation task. The ``Fig.~\ref{U-Net}'' shows the architecture of our semantic segmentation model.
 \begin{figure}[htbp]
 \centerline{\includegraphics[height=6.5cm]{U-Net_model.png}}
 \caption{U-Net architecture Overview}
@@ -72,18 +71,27 @@ The U-Net network is used to semantically segments the rail lines from the given
 \caption{Extracting features along the rail line}
 \label{Rail_line}
 \end{figure} 
-We extract features of each rectangular patch along the same rail line and check if there are anomalies along the same rail. The idea is, whenever some obstacle or non-rail objects come along the rail line, it will block some part of the rail line which will trigger a different feature for that part of rail. For feature extraction, we use Auto-encoders and Gray level co-occurrence matrix. The auto-encoders are neural networks which helps to extract hidden information from a given image unlike hand crafted features. The Auto-encoder has an encoder-decoder structure. The encoder structure ensures that the image fed in is converted into compressed form. Even though, the latent space dimension, which is generated at the end of encoder part of the model, is high, when compared to input image dimension. This quantity is significantly lower and can represent the given input image in a lower dimension effectively. From here the decoder tries to reconstruct the input image given the latent space. This reconstruction error is back-propagated to train the weights. The loss function used here is mean squared error (MSE). We train with the patches of rail generated from RO-DLR dataset [RO DLR Dataset youtube video reference]. Training was done for 50 epochs with a learning rate of 0.0001. Once the Auto encoder is trained, we use the best weight to calculate the reconstruction error of each patch for prediction of anomalies. If the reconstruction error is smaller, then the observed rectangular patch is similar to the one which auto encoder was trained on and hence there is no anomaly. When the reconstruction error is large, it means there is a presence of obstacle in the observed rectangular patch and hence is classified as anomaly. In order to classify the array of reconstruction error values, obtained by dividing the rail into multiple patches we use thresholding. We first do a K means clustering of 2 on the array and check whether the difference in cluster center values is greater than threshold or not. After trial and error, the threshold value was found to be 0.40. If the difference in cluster value is found to be greater than threshold, then the cluster center with larger reconstruction error is considered as anomaly and furthermore its locations are also marked showing as anomaly.
+We extract features of each rectangular patch along the same rail line and check if there are anomalies along the same rail. The idea is, whenever some obstacle or non-rail objects come along the rail line, it will block some part of the rail line which will trigger a different feature for that part of rail. For feature extraction, we use Auto-encoders and Gray level co-occurrence matrix. The auto-encoders are neural networks which helps to extract hidden information from a given image unlike hand crafted features. The Auto-encoder has an encoder-decoder structure. The encoder structure ensures that the image fed in is converted into compressed form. Even though, the latent space dimension, which is generated at the end of encoder part of the model, is high, when compared to input image dimension. This quantity is significantly lower and can represent the given input image in a lower dimension effectively. From here the decoder tries to reconstruct the input image given the latent space. This reconstruction error is back-propagated to train the weights. The loss function used here is mean squared error (MSE). We train with the patches of rail generated from RO-DLR dataset [RO DLR Dataset YouTube video reference]. we use the best weight to calculate the reconstruction error of each patch for prediction of anomalies. If the reconstruction error is smaller, then the observed rectangular patch is similar to the one which auto encoder was trained on and hence there is no anomaly. When the reconstruction error is large, it means there is a presence of obstacle in the observed rectangular patch and hence is classified as anomaly. In order to classify the array of reconstruction error values, obtained by dividing the rail into multiple patches we use thresholding. We first do a K means clustering of 2 on the array and check whether the difference in cluster center values is greater than threshold or not. After trial and error, the threshold value was found to be 0.40. If the difference in cluster value is found to be greater than threshold, then the cluster center with larger reconstruction error is considered as anomaly and furthermore its locations are also marked showing as anomaly.
 
-\subsection{Abbreviations and Acronyms}\label{AA}
-Define abbreviations and acronyms the first time they are used in the text, 
-even after they have been defined in the abstract. Abbreviations such as 
-IEEE, SI, MKS, CGS, ac, dc, and rms do not have to be defined. Do not use 
-abbreviations in the title or heads unless they are unavoidable.
 
-\subsection{Units}
+\section{Experiments}
 \begin{itemize}
-\item Use either SI (MKS) or CGS as primary units. (SI units are encouraged.) English units may be used as secondary units (in parentheses). An exception would be the use of English units as identifiers in trade, such as ``3.5-inch disk drive''.
-\item Avoid combining SI and CGS units, such as current in amperes and magnetic field in oersteds. This often leads to confusion because equations do not balance dimensionally. If you must use mixed units, clearly state the units for each quantity that you use in an equation.
+\item We start the training with semantic segmentation of rail lines from the background. U-Net is chosen as per \cite{ronneberger2015unet} description. The data used here is Railsem-19 \cite{9025646}  which is publicly available. Railsem-19 data contains total of 8500 images with semantic labels mapped on to json files. We split the data into 8390 training images, 60 validation images and 50 test images. We use Tensorflow \cite{tensorflow2015-whitepaper} backend throughout the pipeline. Training was done with 2 NVIDIA GeForce GTX 1080 Ti GPU's with a batch size of 2 and image size of 512 x 512 x 3 (RGB image) as input. We use focal loss \cite{lin2018focal} to train our network since there is a large imbalance of foreground and background pixels in the data set. Focal loss penalizes more for errors on foreground pixels. As per the focal loss \ref{focalloss} equation the loss
+\begin{equation} 
+    FL(p_{t})=-\alpha( 1 - p_{t})^{\gamma}log(p_{t})
+\end{equation}\label{focalloss}
+ where,
+ 
+ p\textsubscript{t} = model's estimated probability for the foreground class
+ 
+ 
+ $\alpha$ = penalty for foreground error (treats imbalance of foreground and background)
+ 
+ 
+ $\gamma$ = modulation factor for easy and hard classifications
+ 
+ 
+\item Auto encoder training was done for 50 epochs with a learning rate of 0.0001. After training we choose the best weight of Auto encoder to reconstruct the rail patch of the test image.
 \item Do not mix complete spellings and abbreviations of units: ``Wb/m\textsuperscript{2}'' or ``webers per square meter'', not ``webers/m\textsuperscript{2}''. Spell out units when they appear in text: ``. . . a few henries'', not ``. . . a few H''.
 \item Use a zero before decimal points: ``0.25'', not ``.25''. Use ``cm\textsuperscript{3}'', not ``cc''.)
 \end{itemize}
@@ -155,7 +163,7 @@ surrounding equation.
 \item There is no period after the ``et'' in the Latin abbreviation ``et al.''.
 \item The abbreviation ``i.e.'' means ``that is'', and the abbreviation ``e.g.'' means ``for example''.
 \end{itemize}
-An excellent style manual for science writers is \cite{b7}.
+An excellent style manual for science writers is.
 
 \subsection{Authors and Affiliations}
 \textbf{The class file is designed for, but not limited to, six authors.} A 
@@ -233,12 +241,12 @@ an ``e'' after the ``g''. Avoid the stilted expression ``one of us (R. B.
 G.) thanks $\ldots$''. Instead, try ``R. B. G. thanks$\ldots$''. Put sponsor 
 acknowledgments in the unnumbered footnote on the first page.
 
-\section*{References}
+\section{References}
 
 Please number citations consecutively within brackets. The 
 sentence punctuation follows the bracket . Refer simply to the reference 
-number, as in \cite{b3}---do not use ``Ref. \cite{b3}'' or ``reference \cite{b3}'' except at 
-the beginning of a sentence: ``Reference \cite{b3} was the first $\ldots$''
+number, as in  '---do not use ``Ref.  ''' or ``reference  ''' except at 
+the beginning of a sentence: ``Reference  ' was the first $\ldots$''
 
 Number footnotes separately in superscripts. Place the actual footnote at 
 the bottom of the column in which it was cited. Do not put footnotes in the 
@@ -246,23 +254,18 @@ abstract or reference list. Use letters for table footnotes.
 
 Unless there are six authors or more give all authors' names; do not use 
 ``et al.''. Papers that have not been published, even if they have been 
-submitted for publication, should be cited as ``unpublished'' \cite{b4}. Papers 
-that have been accepted for publication should be cited as ``in press'' \cite{b5}. 
+submitted for publication, should be cited as ``unpublished''   . Papers 
+that have been accepted for publication should be cited as ``in press''  . 
 Capitalize only the first word in a paper title, except for proper nouns and 
 element symbols.
 
 For papers published in translation journals, please give the English 
-citation first, followed by the original foreign-language citation \cite{b6}.
+citation first, followed by the original foreign-language citation
 
-\begin{thebibliography}{00}
-\bibitem{b1} Oliver Zendel, Markus Murschitz, Marcel Zeilinger, Daniel Steininger, Sara Abbasi, Csaba Beleznai, RailSem19: A Dataset for Semantic Rail Scene Understanding, IEEE Xplore: 10.1109/CVPRW.2019.00161
-\bibitem{b2} Olaf Ronneberger, Philipp Fischer, and Thomas Brox, U-Net: Convolutional Networks for BiomedicalImage Segmentation, arxiv.org:1505.04597, 2015
-\bibitem{b3} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
-\bibitem{b4} K. Elissa, ``Title of paper if known,'' unpublished.
-\bibitem{b5} R. Nicole, ``Title of paper with only first word capitalized,'' J. Name Stand. Abbrev., in press.
-\bibitem{b6} Y. Yorozu, M. Hirano, K. Oka, and Y. Tagawa, ``Electron spectroscopy studies on magneto-optical media and plastic substrate interface,'' IEEE Transl. J. Magn. Japan, vol. 2, pp. 740--741, August 1987 [Digests 9th Annual Conf. Magnetics Japan, p. 301, 1982].
-\bibitem{b7} M. Young, The Technical Writer's Handbook. Mill Valley, CA: University Science, 1989.
-\end{thebibliography}
+\bibliographystyle{IEEEtran}
+\addcontentsline{toc}{section}{References}
+\bibliography{main}
+
 \vspace{12pt}
 \color{red}
 IEEE conference templates contain guidance text for composing and formatting conference papers. Please ensure that all template text is removed from your conference paper prior to submission to the conference. Failure to remove the template text from your paper may result in your paper not being published.
