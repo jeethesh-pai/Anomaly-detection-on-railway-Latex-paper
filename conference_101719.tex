@@ -7,6 +7,8 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
@@ -65,7 +67,7 @@ Our method detects the obstacles or anomalies along the track with the help of d
 \end{figure} 
 
 
-The U-Net network is used to semantically segments the rail lines from the given railway image. Once the rail coordinates from the image data is known, next step is to extract the features along the above-mentioned rail coordinates. To extract feature, as a first step we group out the pixel coordinates which belong to left rail, right rail separately. If there are more rails in an image, then care is taken so that rail pixel coordinates are not mismatched. Then one of the rail lines is selected and a rectangular patch of variable breadth is used to extract feature on that particular part of rail. See ´´Fig.~\ref{Rail_line} for more details. 
+The U-Net network is used to semantically segments the rail lines from the given railway image. Once the rail coordinates from the image data is known, next step is to extract the features along the above-mentioned rail coordinates. To extract feature, as a first step we group out the pixel coordinates which belong to left rail, right rail separately. If there are more rails in an image, then care is taken so that rail pixel coordinates are not mismatched. Then one of the rail lines is selected and a rectangular patch of variable breadth is used to extract feature on that particular part of rail. See ``Fig.~\ref{Rail_line}'' for more details. 
 \begin{figure}[htbp]
 \centerline{\includegraphics[height=4cm]{Rail_line_illustration.png}}
 \caption{Extracting features along the rail line}
@@ -76,10 +78,10 @@ We extract features of each rectangular patch along the same rail line and check
 
 \section{Experiments}
 \begin{itemize}
-\item We start the training with semantic segmentation of rail lines from the background. U-Net is chosen as per \cite{ronneberger2015unet} description. The data used here is Railsem-19 \cite{9025646}  which is publicly available. Railsem-19 data contains total of 8500 images with semantic labels mapped on to json files. We split the data into 8390 training images, 60 validation images and 50 test images. We use Tensorflow \cite{tensorflow2015-whitepaper} backend throughout the pipeline. Training was done with 2 NVIDIA GeForce GTX 1080 Ti GPU's with a batch size of 2 and image size of 512 x 512 x 3 (RGB image) as input. We use focal loss \cite{lin2018focal} to train our network since there is a large imbalance of foreground and background pixels in the data set. Focal loss penalizes more for errors on foreground pixels. As per the focal loss \ref{focalloss} equation the loss
-\begin{equation} 
+\item We start the training with semantic segmentation of rail lines from the background. U-Net is chosen as per \cite{ronneberger2015unet} description. The data used here is Railsem-19 \cite{9025646}  which is publicly available. Railsem-19 data contains total of 8500 images with semantic labels mapped on to json files. We split the data into 8390 training images, 60 validation images and 50 test images. We use Tensorflow \cite{tensorflow2015-whitepaper} backend throughout the pipeline. Training was done with 2 NVIDIA GeForce GTX 1080 Ti GPU's with a batch size of 2 and image size of 512 x 512 x 3 (RGB image) as input. We use focal loss \cite{lin2018focal} to train our network since there is a large imbalance of foreground and background pixels in the data set. Focal loss penalizes more for errors on foreground pixels. As per the focal loss equation  (~\ref{focalloss}~) the loss
+\begin{equation}\label{focalloss}
     FL(p_{t})=-\alpha( 1 - p_{t})^{\gamma}log(p_{t})
-\end{equation}\label{focalloss}
+\end{equation}
  where,
  
  p\textsubscript{t} = model's estimated probability for the foreground class
@@ -91,7 +93,163 @@ We extract features of each rectangular patch along the same rail line and check
  $\gamma$ = modulation factor for easy and hard classifications
  
  
-\item Auto encoder training was done for 50 epochs with a learning rate of 0.0001. After training we choose the best weight of Auto encoder to reconstruct the rail patch of the test image.
+ We keep $\gamma = 2$ and $\alpha = 0.25$ as per recommendation in the focal loss \cite{lin2018focal}. 
+ We use Adam \cite{kingma2017adam} optimizer with a learning rate of 0.0001 for 100 epochs with a batch size of 4. The training took approximately 14 minutes per epoch. 
+\item Auto encoder training was done for 50 epochs with a learning rate of 0.0001. After training we choose the best weight of Auto encoder to reconstruct the rail patch of the test image. The results of training using above specifications can be seen below:
+\begin{figure}[htbp]
+\begin{subfigure}[b]{0.23\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{training_loss_Unet_lr_1e-4.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.23\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{val_loss_Unet_lr_1e-4.png}}
+\end{subfigure}
+
+\begin{subfigure}[b]{0.23\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{training_miou_Unet_lr_1e-4.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.23\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{val_miou_Unet_lr_1e-4.png}}
+\end{subfigure}
+
+\begin{subfigure}[b]{0.23\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{training_dice_accuracy_Unet_lr_1e-4.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.23\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{val_dice_accuracy_Unet_lr_1e-4.png}}
+\end{subfigure}
+
+
+\caption{Training Results of UNet}
+\label{Training_results_Unet}
+\end{figure} 
+
+\item From ``Fig. \ref{Training_results_Unet}'' we can see that MIoU (Mean Intersection over Union) as well as dice accuracy seems to stagnate after the 50\textsuperscript{th} epoch. we take the minimum of validation loss around this epoch to prevent overfitting which is 360 at 45\textsuperscript{th} epoch with MIoU of $28\%$.
+
+\item since segmentation of rail from the image is an important step we proceed with the best validation loss weights to proceed further downstream our project pipeline. Next, we train Autoencoder with the patches of the rail lines generated by the semantic segmentation network. An illustration of the some of the images used for training is displayed in ``Fig. \ref{Training_images_autoencoder}'' 
+
+\begin{figure}[htbp]
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_2_4.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_2_5.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_2_6.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_2_7.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_2_8.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_3_1.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_3_3.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_3_2.png}}
+\end{subfigure}
+
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_3_4.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_3_5.png}}
+\end{subfigure}
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_3_6.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_3_7.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_4_1.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_4_2.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_4_3.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_4_4.png}}
+\end{subfigure}
+
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_4_5.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_4_6.png}}
+\end{subfigure}
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_4_7.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_5_1.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_5_2.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_5_3.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_5_4.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_5_5.png}}
+\end{subfigure}
+
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_5_6.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_5_7.png}}
+\end{subfigure}
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_6_1.png}}
+\end{subfigure}
+\hfill\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_6_2.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_7_4.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_7_5.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_7_6.png}}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.05\textwidth}
+ \centerline{\includegraphics[width=\textwidth]{Autoencoder_jpgs/frame10_7_7.png}}
+\end{subfigure}
+
+\caption{Training Images of Autoencoder}
+\label{Training_images_autoencoder}
+\end{figure} 
+
+\item We train an autoencoder with the following configuration
+
 \item Do not mix complete spellings and abbreviations of units: ``Wb/m\textsuperscript{2}'' or ``webers per square meter'', not ``webers/m\textsuperscript{2}''. Spell out units when they appear in text: ``. . . a few henries'', not ``. . . a few H''.
 \item Use a zero before decimal points: ``0.25'', not ``.25''. Use ``cm\textsuperscript{3}'', not ``cc''.)
 \end{itemize}
